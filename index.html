@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>しりとりバトラー！ — 最長の言葉で生き残れ —</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap');
+    body{font-family:'M PLUS Rounded 1c',sans-serif;background:linear-gradient(135deg,#0284c7 0%,#38bdf8 45%,#e0f2fe 80%,#fef3c7 100%);color:#0f172a;min-height:100vh}
+    .glass-card{background:#fff;border:2px solid #fff;box-shadow:0 10px 25px -5px #0000001f,0 4px 10px -2px #0000000d}
+    .hidden{display:none!important}
+    button:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+  </style>
+
+  <style id="clean-ui-overrides">
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap');
+    :root{--ink:#172033;--muted:#718096;--line:#e5eaf1;--blue:#2563eb;--blue-dark:#1e40af;--orange:#f59e0b;--surface:#fff;--canvas:#f4f6fa}
+    html{background:var(--canvas)}
+    body{font-family:'Noto Sans JP',system-ui,sans-serif!important;background:var(--canvas)!important;color:var(--ink)!important;min-height:100vh;letter-spacing:.01em}
+    header{max-width:960px!important;margin:0 auto 28px!important;padding:8px 0}
+    main{max-width:960px!important;justify-content:flex-start!important;padding-bottom:40px}
+    .glass-card{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:18px!important;box-shadow:0 8px 28px rgba(25,42,70,.055)!important}
+    section.glass-card{padding:clamp(22px,4vw,40px)!important}
+    h2,h3{letter-spacing:-.035em!important;color:var(--ink)}
+    p{line-height:1.7}
+    button{font-family:inherit!important;letter-spacing:.01em;transition:background-color .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease!important;box-shadow:none!important}
+    button:not(:disabled):hover{filter:brightness(.97);transform:translateY(-1px)}
+    button:not(:disabled):active{transform:translateY(0)}
+    button:focus-visible,input:focus-visible{outline:3px solid rgba(37,99,235,.22)!important;outline-offset:2px}
+    button:disabled{opacity:.42!important}
+    input{font-family:inherit!important;border:1px solid #d7deea!important;border-radius:10px!important;background:#fff!important;color:var(--ink)!important;box-shadow:none!important}
+    input:focus{border-color:#7da5f8!important}
+    .bg-gradient-to-br,.bg-gradient-to-r{background-image:none!important}
+    #viewModeSelect{max-width:760px;margin:2vh auto 0}
+    #viewModeSelect h2{font-size:clamp(1.45rem,3vw,2rem)!important;font-weight:800!important}
+    #viewModeSelect .relative{aspect-ratio:2.8/1!important;border-radius:13px!important;box-shadow:none!important;border:1px solid var(--line)!important}
+    #viewModeSelect .relative img{object-position:center 48%}
+    #offlineMode,#onlineMode{min-height:142px;padding:24px!important;border-radius:14px!important;text-align:left!important}
+    #offlineMode{background:#eff5ff!important;color:#1e40af!important;border:1px solid #d8e5ff!important}
+    #onlineMode{background:#fff7e9!important;color:#9a5b08!important;border:1px solid #f5e5c8!important}
+    #offlineMode .text-sky-100,#onlineMode .text-amber-100{color:inherit!important;opacity:.75}
+    #offlineMode .text-lg,#onlineMode .text-lg{font-size:1.05rem!important;font-weight:800!important}
+    #offlineMode .text-3xl,#onlineMode .text-3xl{font-size:1.65rem!important}
+    .countBtn{background:#fff!important;border:1px solid var(--line)!important;color:#475569!important;border-radius:10px!important}
+    .countBtn:focus,.countBtn:active{background:#eff5ff!important;border-color:#93b4f7!important;color:#1d4ed8!important}
+    #startOffline,#startOnline,#submitAnswer,#finishInvestigation,#nextRound{background:var(--blue)!important;color:#fff!important;border:1px solid var(--blue)!important;border-radius:11px!important;font-weight:800!important}
+    #backFromOffline,#backFromOnline, #leaveRoomWait, #backToHomeFromHistory{background:#f1f3f7!important;color:#475569!important;border:1px solid var(--line)!important;border-radius:10px!important}
+    #createRoom{background:var(--blue)!important;color:#fff!important;border-radius:10px!important}
+    #joinRoom{background:#d97706!important;color:#fff!important;border-radius:10px!important}
+    #viewOnlineSetup .bg-sky-50{background:#f5f8ff!important;border:1px solid #e1e9f8!important}
+    #viewOnlineSetup .bg-amber-50{background:#fffaf1!important;border:1px solid #f4e8d3!important}
+    #displayRoomCode{color:#b7791f!important;letter-spacing:.18em}
+    #viewGame{max-width:880px;margin:0 auto}
+    #viewGame>div:first-child{border-color:var(--line)!important;align-items:center}
+    #gameModeBadge{background:#edf3ff!important;color:#2854a6!important;border-radius:6px!important;letter-spacing:.04em}
+    #turnIndicator{font-size:1.05rem!important;font-weight:800!important;color:var(--ink)!important}
+    #timerDisplay{font-size:2rem!important;color:var(--ink)!important;font-weight:800!important}
+    #currentKana{background:#172b4d!important;border-radius:14px!important;padding:24px!important;box-shadow:none!important}
+    #currentKana{color:#fff!important;font-size:clamp(3.5rem,8vw,5rem)!important;line-height:1.15}
+    #currentKana~#kanaVariationHint{color:#dbeafe!important}
+    #viewGame label{font-size:.78rem!important;color:#64748b!important}
+    #answerInput{font-size:1.15rem!important;border:1px solid #cbd5e1!important;border-radius:11px!important;padding:15px!important}
+    #submitAnswer{font-size:1rem!important;padding:15px!important}
+    #offlineReady{background:#eef4ff!important;color:#2854a6!important;border:1px solid #dce7fb!important;border-radius:10px!important}
+    #offlinePassNotice{background:#fff9ed!important;border:1px solid #f3e5c9!important;color:#8a5b13!important;border-radius:10px!important}
+    #playersLifeGrid>div{border:1px solid var(--line)!important;border-radius:11px!important;box-shadow:none!important;padding:12px!important}
+    #viewInvestigation,#viewRoundResult,#viewGameHistory{max-width:880px;margin:0 auto}
+    #viewInvestigation h2,#viewRoundResult h2,#viewGameHistory h2{font-size:1.65rem!important;font-weight:800!important}
+    #submittedAnswersList>div,#roundDamageList>div{border-radius:12px!important;box-shadow:none!important}
+    #finishInvestigation{font-size:.95rem!important}
+    #nextRound{font-size:1rem!important}
+    #ruleModal>div, #historyModal>div{border-radius:16px!important}
+    #ruleModal .bg-sky-50,#ruleModal .bg-amber-50,#ruleModal .bg-rose-50,#ruleModal .bg-emerald-50{background:#f7f9fc!important;border:1px solid var(--line)!important;border-radius:10px!important}
+    #ruleModal h3, #historyModal h3{color:var(--ink)!important}
+    #closeRulesBottom, #closeHistoryBottom{background:var(--blue)!important;border-radius:10px!important}
+    #soundToggle{border:1px solid var(--line)!important;border-radius:10px!important;background:#fff!important;box-shadow:none!important}
+    #rulesButton, #historyButton{background:#fff!important;color:#334155!important;border:1px solid var(--line)!important;border-radius:9px!important}
+    #toastContainer>div{border-radius:10px!important;box-shadow:0 8px 24px rgba(15,23,42,.15)!important}
+
+    /* カスタムスクロールバー（履歴一覧用） */
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    @keyframes damageImpact{
+      0%,100%{transform:translateX(0) scale(1)}
+      15%{transform:translateX(-5px) scale(1.012)}
+      30%{transform:translateX(5px) scale(1.012)}
+      45%{transform:translateX(-3px) scale(1.006)}
+      60%{transform:translateX(3px) scale(1.003)}
+      75%{transform:translateX(0) scale(1)}
+    }
+    @keyframes damageFlash{
+      0%{box-shadow:0 0 0 0 rgba(239,68,68,0);background:#fff}
+      18%{box-shadow:0 0 0 4px rgba(239,68,68,.2);background:#fff1f2}
+      100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+    }
+    @keyframes damageFloat{
+      0%{opacity:0;transform:translateY(12px) scale(.7)}
+      18%{opacity:1;transform:translateY(0) scale(1.12)}
+      35%{transform:translateY(-3px) scale(1)}
+      100%{opacity:0;transform:translateY(-30px) scale(.95)}
+    }
+    
+    /* チャット用アニメーション（下から上に流れる） */
+    @keyframes chatFloatUp {
+      0% { transform: translateY(50px); opacity: 0; }
+      5% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh); opacity: 0; }
+    }
+    .chat-msg {
+      position: absolute;
+      font-size: clamp(1.2rem, 3.5vw, 1.8rem); /* スマホは1.2rem、PCは最大1.8rem */
+      font-weight: 900;
+      color: #ffffff;
+      /* 青みがかった灰色の縁取り */
+      text-shadow: 
+        2px 2px 0 #64748b, -2px -2px 0 #64748b, 
+        2px -2px 0 #64748b, -2px 2px 0 #64748b,
+        0px 3px 6px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      pointer-events: none;
+      animation: chatFloatUp 12s linear forwards; /* 速度を12秒に変更して遅くする */
+    }
+
+    .damage-hit{position:relative;animation:damageImpact .58s ease-out both,damageFlash .8s ease-out both;will-change:transform}
+    .damage-float{position:absolute;z-index:2;right:14px;top:38px;pointer-events:none;color:#dc2626;font-size:1.1rem;font-weight:900;letter-spacing:.02em;text-shadow:0 1px 0 #fff;animation:damageFloat 1.15s ease-out both}
+    .damage-hit .damage-bar{animation:damageBarPulse .75s ease-out both}
+    @media(prefers-reduced-motion:reduce){
+      .damage-hit,.damage-float,.damage-hit .damage-bar{animation:none!important}
+      .chat-msg{animation:none!important;opacity:1;}
+    }
+    @media(max-width:640px){
+      body{padding:14px!important}
+      header{margin-bottom:18px!important}
+      main{padding-bottom:24px}
+      #viewModeSelect .relative{aspect-ratio:2/1!important}
+      #offlineMode,#onlineMode{min-height:112px;padding:18px!important}
+      #viewGame .grid{gap:18px!important}
+      #playersLifeGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      #timerDisplay{font-size:1.7rem!important}
+    }
+  </style>
+</head>
+<body class="p-3 sm:p-6 flex flex-col items-center justify-between min-h-screen relative">
+
+<!-- チャットUI群 (画面左側で下から上に流れる) -->
+<div id="chatDisplayArea" class="fixed inset-0 z-50 pointer-events-none overflow-hidden hidden"></div>
+
+<button id="chatOpenBtn" class="fixed bottom-4 left-3 sm:left-6 z-[60] w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hidden items-center justify-center text-xl transition-colors" title="チャットを開く">
+  💬
+</button>
+
+<div id="chatInputArea" class="fixed bottom-4 left-16 sm:left-20 z-[60] gap-2 hidden items-center bg-white p-2 rounded-xl shadow-lg border border-slate-200">
+  <input id="chatInput" type="text" maxlength="40" placeholder="チャットを入力..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-48 sm:w-56 focus:outline-none focus:border-blue-400">
+  <button id="chatSendBtn" class="px-3 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg whitespace-nowrap hover:bg-blue-700 transition-colors">送信</button>
+</div>
+
+<div id="sceneTransition" class="fixed inset-0 z-[200] bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center pointer-events-none transform translate-x-full transition-transform duration-500 ease-in-out">
+  <div class="text-white text-5xl sm:text-6xl font-black italic tracking-widest [text-shadow:_5px_5px_0_rgba(0,0,0,0.25)] transform -skew-x-12 select-none">
+    BATTLE START!
+  </div>
+</div>
+
+<header class="w-full max-w-md md:max-w-4xl flex justify-between items-center mb-4 relative z-10">
+  <div class="flex items-center gap-2">
+    <img src="logo.png" alt="しりとりバトラー！" class="h-9 sm:h-12 w-auto" onerror="this.style.display='none';document.getElementById('fallbackHeaderTitle').classList.remove('hidden')">
+    <span id="fallbackHeaderTitle" class="hidden text-xl sm:text-2xl font-black text-sky-700">しりとりバトラー！</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <button id="historyButton" class="px-4 py-2 rounded-full text-xs font-black hidden">履歴</button>
+    <button id="soundToggle" class="p-2 rounded-full glass-card text-lg" title="効果音ON/OFF">🔊</button>
+    <button id="rulesButton" class="px-4 py-2 rounded-full text-xs font-black bg-sky-600 text-white">遊び方</button>
+  </div>
+</header>
+
+<div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-11/12 max-w-md pointer-events-none"></div>
+
+<main class="w-full max-w-md md:max-w-4xl flex-1 flex flex-col justify-center relative z-10">
+  <section id="viewModeSelect" class="glass-card rounded-3xl p-5 sm:p-8 text-center">
+    <div class="mb-6">
+      <div class="relative overflow-hidden rounded-2xl shadow-md border border-slate-100 mb-5 aspect-[16/10] md:aspect-[21/9]">
+        <img src="home.png" alt="しりとりバトラー！" class="w-full h-full object-cover" onerror="this.style.display='none'">
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-black text-slate-800">対戦モードを選択</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <button id="offlineMode" class="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-bold text-left shadow-md">
+        <div class="text-3xl mb-2">📱</div><div class="text-lg font-black mb-1">1台で遊ぶ</div>
+        <div class="text-xs text-sky-100">オフライン（パス＆プレイ）<br>スマホ・PC1台を順番に回して対戦</div>
+      </button>
+      <button id="onlineMode" class="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold text-left shadow-md">
+        <div class="text-3xl mb-2">🌐</div><div class="text-lg font-black mb-1">オンライン対戦</div>
+        <div class="text-xs text-amber-100">部屋コードを共有して対戦</div>
+      </button>
+    </div>
+  </section>
+
+  <section id="viewOfflineSetup" class="glass-card rounded-3xl p-6 sm:p-8 hidden">
+    <h2 class="text-xl font-black mb-4 text-center">プレイヤー人数の選択</h2>
+    <div class="flex justify-center gap-3 mb-6">
+      <button data-count="2" class="countBtn px-5 py-3 rounded-xl bg-sky-50 font-bold flex-1 border border-sky-200">2人対戦</button>
+      <button data-count="3" class="countBtn px-5 py-3 rounded-xl bg-sky-50 font-bold flex-1 border border-sky-200">3人対戦</button>
+      <button data-count="4" class="countBtn px-5 py-3 rounded-xl bg-sky-50 font-bold flex-1 border border-sky-200">4人対戦</button>
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1">初期ライフ</label>
+        <input id="offlineInitialLife" type="number" min="1" value="50" class="w-full px-3 py-2 rounded-lg bg-white border border-sky-200 font-bold">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1">回答時間(秒)</label>
+        <input id="offlineTimeLimit" type="number" min="1" value="20" class="w-full px-3 py-2 rounded-lg bg-white border border-sky-200 font-bold">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1">調査時間(秒)※0でスキップ</label>
+        <input id="offlineInvestigationTime" type="number" min="0" value="15" class="w-full px-3 py-2 rounded-lg bg-white border border-sky-200 font-bold">
+      </div>
+    </div>
+
+    <div id="playerInputs" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6"></div>
+    <div class="flex gap-3">
+      <button id="backFromOffline" class="px-4 py-3 rounded-xl bg-slate-200 font-bold">戻る</button>
+      <button id="startOffline" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-lg">対戦開始！</button>
+    </div>
+  </section>
+
+  <section id="viewOnlineSetup" class="glass-card rounded-3xl p-6 sm:p-8 hidden">
+    <h2 class="text-xl font-black mb-4 text-center">オンライン対戦ルーム</h2>
+    <label class="block text-xs text-slate-500 font-bold mb-1">あなたのプレイヤー名</label>
+    <input id="onlinePlayerName" maxlength="12" value="プレイヤー1" class="w-full px-4 py-2.5 rounded-xl border-2 border-sky-200 font-bold mb-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div class="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200 text-center flex flex-col justify-between">
+        <div>
+          <h3 class="font-bold text-sky-900 mb-2">自分で部屋を作る</h3>
+          <div class="grid grid-cols-3 gap-2 mb-3 text-left">
+             <div>
+               <label class="block text-[10px] text-slate-500 font-bold mb-1">初期ライフ</label>
+               <input id="onlineInitialLife" type="number" min="1" value="50" class="w-full px-2 py-1.5 rounded-lg bg-white border border-sky-200 font-bold text-sm">
+             </div>
+             <div>
+               <label class="block text-[10px] text-slate-500 font-bold mb-1">回答時間</label>
+               <input id="onlineTimeLimit" type="number" min="1" value="20" class="w-full px-2 py-1.5 rounded-lg bg-white border border-sky-200 font-bold text-sm">
+             </div>
+             <div>
+               <label class="block text-[10px] text-slate-500 font-bold mb-1">調査時間</label>
+               <input id="onlineInvestigationTime" type="number" min="0" value="15" class="w-full px-2 py-1.5 rounded-lg bg-white border border-sky-200 font-bold text-sm">
+             </div>
+          </div>
+        </div>
+        <button id="createRoom" class="w-full py-2.5 rounded-xl bg-sky-600 text-white font-bold">部屋を作成</button>
+      </div>
+      <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-center">
+        <h3 class="font-bold text-amber-900 mb-2">友達の部屋に入る</h3>
+        <input id="inputRoomCode" placeholder="5桁の部屋コード" maxlength="5" class="w-full px-3 py-2 text-center tracking-widest font-mono text-lg rounded-xl border-2 mb-2 uppercase">
+        <button id="joinRoom" class="w-full py-2 rounded-xl bg-amber-500 text-white font-bold">入室する</button>
+      </div>
+    </div>
+    <button id="backFromOnline" class="px-4 py-3 rounded-xl bg-slate-200 font-bold">戻る</button>
+  </section>
+
+  <!-- 待機画面用セクション -->
+  <section id="viewOnlineWaitRoom" class="glass-card rounded-3xl p-6 sm:p-8 hidden">
+    <h2 class="text-xl font-black mb-4 text-center">参加者待機ルーム</h2>
+    <div class="p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center mb-6">
+      <div class="text-xs text-slate-500 font-bold mb-1">部屋コード</div>
+      <div id="displayRoomCode" class="text-3xl font-mono font-black text-amber-500 tracking-widest mb-3">-----</div>
+      <div class="flex justify-center gap-2 mb-4">
+        <button id="copyInvite" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">📋 招待URLをコピー</button>
+      </div>
+      <div class="text-xs text-slate-600 mb-2 font-bold">参加メンバー（<span id="onlineMemberCount">1</span>/4）</div>
+      <div id="onlineMemberList" class="flex flex-col gap-2 mb-6"></div>
+      
+      <button id="startOnline" class="hidden w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-lg shadow-md transition-all">ゲーム開始！</button>
+      <p id="waitingMessage" class="text-sm text-amber-800 font-bold mt-2">ホストがゲームを開始するまでお待ちください。</p>
+    </div>
+    <button id="leaveRoomWait" class="w-full py-3 rounded-xl font-bold">退出する（ホーム画面に戻る）</button>
+  </section>
+
+  <section id="viewGame" class="glass-card rounded-3xl p-5 sm:p-7 hidden">
+    <div class="flex justify-between items-center mb-5 pb-3 border-b border-sky-100">
+      <div><span id="gameModeBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-800">オフライン</span>
+        <h2 id="turnIndicator" class="text-base sm:text-xl font-black mt-1">回答を入力してください</h2></div>
+      <div class="text-right"><div class="text-xs text-slate-500 font-bold">残り時間</div><div id="timerDisplay" class="text-3xl sm:text-4xl font-black font-mono text-sky-600">--</div></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+      <div class="md:col-span-7 space-y-4">
+        <div class="p-6 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 text-white text-center">
+          <div class="text-xs text-sky-100 font-bold mb-1">最初の文字（頭文字）</div>
+          <div id="currentKana" class="text-5xl sm:text-6xl font-black text-amber-300 tracking-wider mb-1">ほ</div>
+          <div id="kanaVariationHint" class="text-xs text-sky-100 font-bold"></div>
+        </div>
+        <div id="offlinePassNotice" class="hidden rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-sm font-bold text-amber-800">回答者に端末を渡してください。準備ができたら下のボタンを押してください。</div>
+        
+        <!-- 回答入力エリア -->
+        <div>
+          <label id="answerLabel" class="block text-xs text-slate-500 font-bold mb-1">ひらがなで入力してください（「・」「ー」も使用可能）</label>
+          <input id="answerInput" maxlength="40" autocomplete="off" placeholder="例：ほうせきばこ" class="w-full px-4 py-3.5 text-lg sm:text-xl font-bold text-center rounded-xl bg-white border-2 border-sky-300 focus:outline-none focus:border-amber-400">
+        </div>
+        <button id="submitAnswer" class="w-full py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-xl shadow-md">回答する！</button>
+        <button id="offlineReady" class="hidden w-full py-3 rounded-xl bg-sky-600 text-white font-bold">回答を入力する</button>
+
+        <!-- 観戦モード時エリア -->
+        <div id="spectatorArea" class="hidden w-full p-5 rounded-2xl bg-slate-100 border-2 border-slate-300 text-center">
+          <div class="text-xl font-black text-slate-700 mb-1">あなたは脱落しました</div>
+          <div class="text-sm text-slate-500 mb-4">他のプレイヤーの対戦を観戦中です</div>
+          <button id="leaveFromSpectate" class="px-5 py-2.5 rounded-xl bg-slate-300 text-slate-700 font-bold hover:bg-slate-400 transition-colors">部屋から退出する</button>
+        </div>
+
+        <p id="answerStatus" class="text-xs text-slate-500 text-center"></p>
+      </div>
+      <div class="md:col-span-5">
+        <div class="text-xs text-slate-500 font-bold mb-2">参加者のライフ</div>
+        <div id="playersLifeGrid" class="grid grid-cols-2 md:grid-cols-1 gap-2.5"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="viewInvestigation" class="glass-card rounded-3xl p-6 sm:p-8 hidden text-center">
+    <span class="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs font-black rounded-full mb-2">判定タイム</span>
+    <h2 class="text-2xl font-black mb-2">異議申し立て・調査</h2>
+    <p id="investigationMessage" class="text-sm text-slate-600 font-bold mb-4">回答を確認してください。</p>
+    <div id="submittedAnswersList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-left"></div>
+    <div id="investigationTimerWrap" class="hidden text-center mb-4"><span class="text-sm font-bold text-slate-500">調査終了まで </span><span id="investigationTimer" class="text-2xl font-black text-amber-600">--</span><span class="text-sm font-bold text-slate-500"> 秒</span></div>
+    <button id="finishInvestigation" class="w-full max-w-md mx-auto block py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black text-lg">判定を確定してダメージ計算</button>
+  </section>
+
+  <section id="viewRoundResult" class="glass-card rounded-3xl p-6 sm:p-8 hidden text-center">
+    <h2 class="text-2xl sm:text-3xl font-black mb-1">ラウンド結果</h2>
+    <p id="resultLongestInfo" class="text-xs sm:text-sm text-slate-600 font-bold mb-6"></p>
+    <div id="roundDamageList" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-6 text-left"></div>
+    <button id="nextRound" class="w-full max-w-md mx-auto block py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-lg">次のラウンドへ！</button>
+  </section>
+
+  <section id="viewGameHistory" class="glass-card rounded-3xl p-6 sm:p-8 hidden text-center">
+    <h2 class="text-2xl sm:text-3xl font-black mb-2">対戦の記録</h2>
+    <p class="text-sm text-slate-600 font-bold mb-6">全ラウンドのお題と回答一覧</p>
+    <div id="usedWordsList" class="mb-8 text-left max-h-[50vh] overflow-y-auto px-4 custom-scrollbar space-y-6"></div>
+    <div class="border-t border-slate-100 pt-6 flex flex-col sm:flex-row gap-3 justify-center">
+      <button id="backToHomeFromHistory" class="w-full max-w-md py-4 rounded-xl text-lg font-black transition-colors">ホーム画面に戻る</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="ruleModal" class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 hidden">
+  <div class="glass-card rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-black text-sky-600">⚔️ ゲームのルール</h3><button id="closeRules" class="text-2xl font-bold">×</button></div>
+    <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+      <p class="p-3 rounded-xl bg-sky-50"><b>① 基本ルール</b><br>2〜4人で対戦します。初期ライフや回答時間は任意に設定できます。指定された文字から始まる言葉を入力します。</p>
+      <p class="p-3 rounded-xl bg-amber-50"><b>② 使用できる文字</b><br>ひらがな・小文字・長音「ー」・中点「・」を使用できます。カタカナは使用できません。過去のラウンドで使用した同じ言葉は再使用できません（※同じラウンド内での重複は有効になります）。</p>
+      <p class="p-3 rounded-xl bg-rose-50"><b>③ ダメージ</b><br>有効回答の最長文字数との差がダメージになります。最長回答はダメージ0。無回答・無効回答は0文字として扱います。</p>
+      <p class="p-3 rounded-xl bg-emerald-50"><b>④ 「ん」で終わる回答</b><br>最長文字数の回答が「ん」で終わる場合、その回答者は脱落します。ライフ0のプレイヤーも脱落します。</p>
+      <p class="p-3 rounded-xl bg-sky-50"><b>⑤ 異議申し立て</b><br>他の人の回答に異議を出せます。異議を出した人は表示されません。別のプレイヤーが有効と判断して解除しなければ、調査終了時に無効になります。調査時間は任意に設定できます（0秒にするとスキップされます）。</p>
+      <p class="p-3 rounded-xl bg-amber-50"><b>⑥ 次のお題</b><br>原則として最長回答の最後の文字から次のお題を決めます。最長回答者が「ん」で脱落した場合は、次に長い有効回答を使います。</p>
+      <p class="text-xs text-slate-500">※このゲームは言葉の実在性を自動判定しません。プレイヤー同士で辞書などを使って確認してください。</p>
+    </div>
+    <button id="closeRulesBottom" class="w-full mt-5 py-2.5 rounded-xl bg-sky-600 text-white font-bold">閉じる</button>
+  </div>
+</div>
+
+<div id="historyModal" class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 hidden">
+  <div class="glass-card rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto flex flex-col">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-black text-sky-600">📜 対戦履歴</h3>
+      <button id="closeHistory" class="text-2xl font-bold">×</button>
+    </div>
+    <div id="modalHistoryContent" class="flex-1 overflow-y-auto px-2 custom-scrollbar space-y-6 text-left text-sm text-slate-700">
+      <!-- 履歴が動的に挿入されます -->
+    </div>
+    <button id="closeHistoryBottom" class="w-full mt-5 py-2.5 rounded-xl bg-sky-600 text-white font-bold">閉じる</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const MAX_PLAYERS=4;
+const KANA_GROUPS={
+ 'か':['か','が'],'き':['き','ぎ'],'く':['く','ぐ'],'け':['け','げ'],'こ':['こ','ご'],
+ 'さ':['さ','ざ'],'し':['し','じ'],'す':['す','ず'],'せ':['せ','ぜ'],'そ':['そ','ぞ'],
+ 'た':['た','だ'],'ち':['ち','ぢ'],'つ':['つ','づ'],'て':['て','で'],'と':['と','ど'],
+ 'は':['は','ば','ぱ'],'ひ':['ひ','び','ぴ'],'ふ':['ふ','ぶ','ぷ'],'へ':['へ','べ','ぺ'],'ほ':['ほ','ぼ','ぽ'],
+ 'う':['う','ゔ']
+};
+const ALL_KANAS=Array.from('あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ');
+const VOWELS={あ:'あ',か:'あ',さ:'あ',た:'あ',な:'あ',は:'あ',ま:'あ',や:'あ',ら:'あ',わ:'あ',が:'あ',ざ:'あ',だ:'あ',ば:'あ',ぱ:'あ',
+い:'い',き:'い',し:'い',ち:'い',に:'い',ひ:'い',み:'い',り:'い',ぎ:'い',じ:'い',ぢ:'い',び:'い',ぴ:'い',
+う:'う',く:'う',す:'う',つ:'う',ぬ:'う',ふ:'う',む:'う',ゆ:'う',る:'う',ぐ:'う',ず:'う',づ:'う',ぶ:'う',ぷ:'う',ゔ:'う',
+え:'え',け:'え',せ:'え',て:'え',ね:'え',へ:'え',め:'え',れ:'え',げ:'え',ぜ:'え',で:'え',べ:'え',ぺ:'え',
+お:'お',こ:'お',そ:'お',と:'お',の:'お',ほ:'お',も:'お',よ:'お',ろ:'お',を:'お',ご:'お',ぞ:'お',ど:'お',ぼ:'お',ぽ:'お'};
+const $=id=>document.getElementById(id);
+
+let state={mode:'offline',players:[],round:0,kana:'ほ',answers:{},usedWords:[],history:[],phase:'setup',host:false,myId:null,roomCode:'',peer:null,connections:new Map(),timer:null,seconds:20,investigationTimer:null,investigationSeconds:15,objections:{},sound:true,lastResults:[],nextKana:'',finished:false,initialLife:50,timeLimit:20,investigationTime:15};
+
+const VIEWS=['viewModeSelect','viewOfflineSetup','viewOnlineSetup','viewOnlineWaitRoom','viewGame','viewInvestigation','viewRoundResult','viewGameHistory'];
+
+// 音声の自動再生ポリシー解除とプリロード設定
+const sounds = {
+  start: new Audio('start-gong.mp3'),
+  hit: new Audio('hit1.mp3'),
+  cheer: new Audio('cheer.mp3')
+};
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  
+  // iOS等の制限を回避するため、最初のユーザーインタラクション時にすべての音声を一度「ロード」および「再生＆即停止」させる
+  Object.values(sounds).forEach(audio => {
+    audio.load();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(e => {
+        // ポリシーによりブロックされた場合等のハンドリング
+      });
+    }
+  });
+
+  document.removeEventListener('click', unlockAudio);
+  document.removeEventListener('touchstart', unlockAudio);
+}
+// PC向け、スマホ向け両方のイベントにバインド
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+
+function playSound(type) {
+  if(!state.sound || !sounds[type]) return;
+  try {
+    // 連続再生時にも音が鳴るように、元のオブジェクトをクローンして再生
+    const clone = sounds[type].cloneNode();
+    clone.volume = 0.5;
+    clone.play().catch(e => {
+      // 古いiOSなど、クローン再生が弾かれる場合は元のオブジェクトを使い回す
+      sounds[type].currentTime = 0;
+      sounds[type].volume = 0.5;
+      sounds[type].play().catch(err => {});
+    });
+  } catch(e) {}
+}
+
+function updateChatVisibility(viewId) {
+  const onlineViews = ['viewOnlineWaitRoom', 'viewGame', 'viewInvestigation', 'viewRoundResult', 'viewGameHistory'];
+  const shouldShow = state.mode === 'online' && state.peer && state.roomCode && onlineViews.includes(viewId);
+  
+  if(shouldShow) {
+    $('chatOpenBtn').classList.remove('hidden');
+    $('chatOpenBtn').classList.add('flex');
+    $('chatDisplayArea').classList.remove('hidden');
+  } else {
+    $('chatOpenBtn').classList.add('hidden');
+    $('chatOpenBtn').classList.remove('flex');
+    $('chatDisplayArea').classList.add('hidden');
+    $('chatInputArea').classList.add('hidden');
+  }
+}
+
+function updateHistoryButtonVisibility(viewId) {
+  const showViews = ['viewGame', 'viewInvestigation', 'viewRoundResult'];
+  if (showViews.includes(viewId) && state.history.length > 0) {
+    $('historyButton').classList.remove('hidden');
+  } else {
+    $('historyButton').classList.add('hidden');
+  }
+}
+
+function showView(id){
+  VIEWS.forEach(v=>$(v).classList.toggle('hidden',v!==id));
+  updateChatVisibility(id);
+  updateHistoryButtonVisibility(id);
+}
+
+function toast(msg,error=false){const el=document.createElement('div');el.className=`mb-2 rounded-xl px-4 py-3 text-center text-sm font-bold shadow-lg ${error?'bg-rose-600':'bg-slate-800'} text-white`;el.textContent=msg;$('toastContainer').appendChild(el);setTimeout(()=>el.remove(),2800);}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function normalize(s){return String(s||'').normalize('NFC');}
+function baseKana(c){for(const [b,vs] of Object.entries(KANA_GROUPS))if(vs.includes(c))return b;return c;}
+function variations(c){return KANA_GROUPS[c]||[c];}
+function randomKana(){return ALL_KANAS[Math.floor(Math.random()*ALL_KANAS.length)];}
+function validCharacters(word){return /^[ぁ-ゖゔー・]+$/u.test(word);}
+
+function showChatMessage(name, text) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg';
+  el.style.left = Math.random() * 5 + 3 + '%';
+  el.style.bottom = '-50px';
+  el.textContent = `${name}：${text}`;
+  $('chatDisplayArea').appendChild(el);
+  setTimeout(() => { el.remove(); }, 12000);
+}
+
+function playTransition(callback){
+ const transitionEl=$('sceneTransition');
+ transitionEl.style.transition = '';
+ transitionEl.classList.remove('translate-x-full','-translate-x-full');
+ transitionEl.classList.add('translate-x-0');
+ setTimeout(()=>{
+  if(callback)callback();
+  setTimeout(()=>{
+   transitionEl.classList.remove('translate-x-0');
+   transitionEl.classList.add('-translate-x-full');
+   setTimeout(()=>{
+    transitionEl.style.transition = 'none';
+    transitionEl.classList.remove('-translate-x-full');
+    transitionEl.classList.add('translate-x-full');
+    setTimeout(()=>{
+     transitionEl.style.transition = '';
+    },50);
+   },500);
+  },800);
+ },500);
+}
+
+function validateWord(raw,kana){
+ const word=normalize(raw.trim());
+ if(!word)return {ok:false,reason:'言葉が未入力です'};
+ if(!validCharacters(word))return {ok:false,reason:'ひらがな・小文字・「ー」「・」のみ使用できます'};
+ const first=Array.from(word)[0];
+ if(baseKana(first)!==baseKana(kana))return {ok:false,reason:`「${kana}」から始まっていません`};
+ if(state.usedWords.includes(word))return {ok:false,reason:'⚠️ この言葉は既に使われています！'};
+ return {ok:true,word,length:Array.from(word).filter(c=>c!=='・').length};
+}
+
+function meaningfulLast(word){
+ const chars=Array.from(word).filter(c=>c!=='・');
+ if(!chars.length)return '';
+ const small={'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ','っ':'つ','ゕ':'か','ゖ':'け'};
+ let last=chars[chars.length-1];
+ if(last==='ー'){
+  let prev='';
+  // 「ー」以外の直近の文字を探す
+  for(let i=chars.length-2;i>=0;i--){
+   if(chars[i]!=='ー'){
+     prev=small[chars[i]]||chars[i];
+     break;
+   }
+  }
+  if(prev){
+   const vowel=VOWELS[prev];
+   if(vowel) return vowel;
+  }
+  return 'ー'; // 母音が見つからない場合のフォールバック
+ }
+ return small[last]||last;
+}
+
+function stopTimers(){clearInterval(state.timer);clearInterval(state.investigationTimer);state.timer=null;state.investigationTimer=null;}
+function alive(){return state.players.filter(p=>p.life>0);}
+function updateLife(){
+ $('playersLifeGrid').innerHTML=state.players.map(p=>{const pct=Math.max(0,Math.min(100,p.life/state.initialLife*100));return `<div class="p-2.5 rounded-xl bg-white border border-sky-200 shadow-sm"><div class="flex justify-between items-center text-xs mb-1"><span class="font-bold truncate max-w-[110px]">${esc(p.name)}</span><span class="font-mono font-bold text-sky-600">${p.life}/${state.initialLife}</span></div><div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-400 to-amber-400" style="width:${pct}%"></div></div></div>`}).join('');
+}
+
+function renderTurn(){
+ $('currentKana').textContent=state.kana;
+ $('kanaVariationHint').textContent=variations(baseKana(state.kana)).length>1?`（${variations(baseKana(state.kana)).join('・')} も使用可能）`:'';
+ updateLife();
+}
+
+function beginGame(){
+ stopTimers();state.round=1;state.usedWords=[];state.history=[];state.finished=false;state.answers={};state.objections={};state.kana=randomKana();state.phase='answer';
+ if(state.sound){
+   playSound('start');
+ }
+ playTransition(()=>{
+  renderTurn();
+  showView('viewGame');
+  $('gameModeBadge').textContent=state.mode==='offline'?'オフライン':'オンライン';
+  if(state.mode==='offline'){state.players.forEach(p=>state.answers[p.id]=null);startOfflineTurn();}
+  else {state.answers={};startOnlineAnswerPhase();}
+ });
+}
+
+function startOfflineTurn(){
+ stopTimers();
+ // パス画面中でも残り時間の初期値を表示させておく
+ $('timerDisplay').textContent = state.timeLimit;
+ 
+ const p=state.players[state.players.findIndex(x=>!state.answers[x.id]&&x.life>0)];
+ if(!p){startInvestigation();return;}
+ const index=state.players.indexOf(p);
+ $('turnIndicator').textContent=`${p.name} の番`;
+ $('offlinePassNotice').classList.remove('hidden');$('offlineReady').classList.remove('hidden');
+ $('answerLabel').classList.remove('hidden');
+ $('answerInput').classList.add('hidden');$('submitAnswer').classList.add('hidden');$('answerStatus').textContent='回答者以外は画面を見ないようにしてください。';
+ $('offlineReady').onclick=()=>{ $('offlinePassNotice').classList.add('hidden');$('offlineReady').classList.add('hidden');$('answerInput').classList.remove('hidden');$('submitAnswer').classList.remove('hidden');$('answerInput').value='';$('answerInput').focus();$('answerStatus').textContent=`${p.name} が回答中です。`;startAnswerTimer();};
+}
+
+function startOnlineAnswerPhase(){
+ $('turnIndicator').textContent='全員同時に回答してください';
+ $('offlinePassNotice').classList.add('hidden');$('offlineReady').classList.add('hidden');
+ 
+ const me = state.players.find(p => p.id === state.myId);
+ const isDead = me && me.life <= 0;
+ 
+ if(isDead) {
+   $('answerLabel').classList.add('hidden');
+   $('answerInput').classList.add('hidden');
+   $('submitAnswer').classList.add('hidden');
+   $('answerStatus').classList.add('hidden');
+   $('spectatorArea').classList.remove('hidden');
+   $('turnIndicator').textContent='観戦中...';
+ } else {
+   $('answerLabel').classList.remove('hidden');
+   $('answerInput').classList.remove('hidden');
+   $('submitAnswer').classList.remove('hidden');
+   $('answerStatus').classList.remove('hidden');
+   $('spectatorArea').classList.add('hidden');
+   
+   $('answerInput').value='';$('answerInput').disabled=false;$('submitAnswer').disabled=false;
+   $('answerStatus').textContent='回答を送信すると、他のプレイヤーの回答を待ちます。';
+ }
+
+ if(state.host){state.answers={};broadcast({type:'ROUND_START',snapshot:snapshot()});}
+ startAnswerTimer();
+}
+
+function startAnswerTimer(){
+ stopTimers();state.seconds=state.timeLimit;$('timerDisplay').textContent=state.seconds;
+ state.timer=setInterval(()=>{
+  state.seconds--;$('timerDisplay').textContent=state.seconds;
+  if(state.seconds<=0){
+   stopTimers();
+   if(state.mode==='offline'){
+    const p=state.players.find(x=>!state.answers[x.id]&&x.life>0);if(!p)return;
+    const raw=$('answerInput').value;const checked=validateWord(raw,state.kana);
+    state.answers[p.id]=checked.ok?{word:checked.word,length:checked.length,valid:true}:{word:raw.trim()||'（時間切れ）',length:0,valid:false,reason:checked.reason};
+    $('answerInput').value='';
+    const remaining=state.players.some(x=>x.life>0&&!state.answers[x.id]);
+    if(remaining)startOfflineTurn();else startInvestigation();
+   }
+   else if(state.host){
+    const me = state.players.find(p => p.id === state.myId);
+    if(me && me.life > 0 && !state.answers[state.myId]){
+     const raw=$('answerInput').value,checked=validateWord(raw,state.kana);
+     state.answers[state.myId]=checked.ok?{word:checked.word,length:checked.length,valid:true}:{word:raw.trim()||'（時間切れ）',length:0,valid:false,reason:checked.reason};
+    }
+    state.players.filter(p=>p.life>0&&!state.answers[p.id]).forEach(p=>state.answers[p.id]={word:'（時間切れ）',length:0,valid:false});
+    startInvestigation();
+   } else {
+    const me = state.players.find(p => p.id === state.myId);
+    if(me && me.life > 0 && !state.answers[state.myId]){
+     const raw=$('answerInput').value;const checked=validateWord(raw,state.kana);
+     const answer=checked.ok?{word:checked.word,length:checked.length,valid:true}:{word:raw.trim()||'（時間切れ）',length:0,valid:false,reason:checked.reason};
+     send({type:'ANSWER',answer});
+     $('submitAnswer').disabled=true;$('answerInput').disabled=true;
+     if(me.life > 0) $('answerStatus').textContent='時間切れです。';
+    }
+   }
+  }
+ },1000);
+}
+
+function submitOffline(){
+ const p=state.players.find(x=>!state.answers[x.id]&&x.life>0);if(!p)return;
+ const raw=$('answerInput').value;
+ if(!raw.trim()){ toast('言葉を入力してください', true); return; }
+ const checked=validateWord(raw,state.kana);
+ if(!checked.ok){ toast(checked.reason, true); return; }
+ 
+ state.answers[p.id]={word:checked.word,length:checked.length,valid:true};
+ $('answerInput').value='';
+ const remaining=state.players.some(x=>x.life>0&&!state.answers[x.id]);
+ if(remaining)startOfflineTurn();else startInvestigation();
+}
+
+function submitOnline(){
+ if(state.answers[state.myId])return;
+ const raw=$('answerInput').value;
+ if(!raw.trim()){ toast('言葉を入力してください', true); return; }
+ const checked=validateWord(raw,state.kana);
+ if(!checked.ok){ toast(checked.reason, true); return; }
+ 
+ const answer={word:checked.word,length:checked.length,valid:true};
+ if(state.host){
+  state.answers[state.myId]=answer;
+  afterOnlineAnswer();
+ } else {
+  send({type:'ANSWER',answer});
+  $('submitAnswer').disabled=true;$('answerInput').disabled=true;$('answerStatus').textContent='回答を送信しました。他のプレイヤーを待っています。';
+ }
+}
+
+function afterOnlineAnswer(){
+ if(state.players.filter(p=>p.life>0).every(p=>state.answers[p.id])){stopTimers();startInvestigation();}
+ else {
+   const me = state.players.find(p=>p.id===state.myId);
+   if(me && me.life > 0) $('answerStatus').textContent='回答を送信しました。他のプレイヤーを待っています。';
+ }
+ broadcast({type:'ANSWER_STATUS',answered:Object.keys(state.answers)});
+}
+
+function snapshot(){
+  return {
+    players:state.players,kana:state.kana,round:state.round,answers:state.answers,
+    usedWords:state.usedWords,history:state.history,phase:state.phase,objections:state.objections,
+    initialLife:state.initialLife, timeLimit:state.timeLimit, investigationTime:state.investigationTime
+  };
+}
+function applySnapshot(s){
+  state.players=s.players;state.kana=s.kana;state.round=s.round;
+  state.answers=s.answers||{};state.usedWords=s.usedWords||[];state.history=s.history||[];
+  state.phase=s.phase;state.objections=s.objections||{};
+  if(s.initialLife !== undefined) state.initialLife = s.initialLife;
+  if(s.timeLimit !== undefined) state.timeLimit = s.timeLimit;
+  if(s.investigationTime !== undefined) state.investigationTime = s.investigationTime;
+  renderTurn();
+}
+
+function startInvestigation(){
+ if (state.investigationTime <= 0) {
+   if (state.mode === 'offline' || (state.mode === 'online' && state.host)) {
+     finishRound();
+   }
+   return;
+ }
+ stopTimers();state.phase='investigation';state.objections={};$('answerInput').disabled=false;$('submitAnswer').disabled=false;
+ if(state.mode==='online'&&state.host)broadcast({type:'INVESTIGATION',snapshot:snapshot()});
+ renderInvestigation();showView('viewInvestigation');
+}
+
+function renderInvestigation(){
+ const entries=state.players.filter(p=>p.life>0).map(p=>{
+  const a=state.answers[p.id]||{word:'（無回答）',length:0,valid:false};const objection=state.objections[p.id];
+  const challenged=!!objection&&!objection.cleared;
+  let controls='';
+  if(state.mode==='offline'){
+   controls=`<button data-action="object" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-xl text-xs font-bold ${challenged?'bg-rose-100 text-rose-700':'bg-rose-600 text-white'}">${challenged?'異議あり（解除待ち）':'異議あり！'}</button>${challenged?`<button data-action="clear" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">有効にする</button>`:''}`;
+  }else{
+   const myObjection=objection&&objection.by===state.myId;
+   controls=`${!challenged&&!objection?`<button data-action="object" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold" ${p.id===state.myId?'disabled':''}>異議あり！</button>`:''}${challenged&&!myObjection?`<button data-action="clear" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">有効にする</button>`:''}${myObjection?'<span class="text-xs text-rose-600 font-bold">異議申し立て中</span>':''}`;
+  }
+  const status=challenged?'異議あり・調査中':objection?.cleared?'有効（異議解除）':a.valid?'有効候補':'無回答・入力時点で無効';
+  return `<div class="p-3.5 rounded-2xl bg-white border ${challenged?'border-rose-300':'border-sky-200'} shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0"><div class="text-xs text-slate-500 font-bold">${esc(p.name)}</div><div class="text-lg font-black break-all ${a.valid?'text-slate-800':'text-slate-400'}">${esc(a.word)}</div><div class="text-xs text-slate-500">${a.valid?a.length+'文字':'0文字'} ・ ${status}</div></div><div class="flex flex-col gap-1 shrink-0">${controls}</div></div></div>`;
+ }).join('');
+ $('submittedAnswersList').innerHTML=entries;
+ $('submittedAnswersList').querySelectorAll('button[data-action]').forEach(btn=>btn.addEventListener('click',()=>handleObjection(btn.dataset.action,btn.dataset.id)));
+ const active=Object.values(state.objections).some(o=>!o.cleared);
+ $('investigationTimerWrap').classList.toggle('hidden',!active);
+ $('investigationMessage').textContent=active?'異議が出ています。別のプレイヤーが「有効にする」を押すと解除されます。':'回答を確認してください。異議がなければ判定を確定できます。';
+ $('finishInvestigation').disabled=state.mode==='online'&&!state.host;
+}
+
+function handleObjection(action,targetId){
+ if(state.phase!=='investigation')return;
+ if(action==='object'){
+  if(state.objections[targetId])return;
+  if(state.mode==='online'){send({type:'OBJECTION',targetId});return;}
+  state.objections[targetId]={by:'offline_hidden',cleared:false};
+ }else{
+  const o=state.objections[targetId];if(!o||o.cleared)return;
+  if(state.mode==='offline'){o.cleared=true;}
+  else {send({type:'CLEAR_OBJECTION',targetId});return;}
+ }
+ renderInvestigation();
+ if(Object.values(state.objections).some(o=>!o.cleared))startInvestigationTimer();
+}
+
+function startInvestigationTimer(){
+ if(state.investigationTimer)return;
+ state.investigationSeconds=state.investigationTime;$('investigationTimer').textContent=state.investigationTime;$('investigationTimerWrap').classList.remove('hidden');
+ state.investigationTimer=setInterval(()=>{$('investigationTimer').textContent=--state.investigationSeconds;if(state.investigationSeconds<=0){stopTimers();if(state.mode==='offline')finishRound();else if(state.host)finishRound();}},1000);
+}
+
+function finishRound(){
+ if(state.mode==='online'&&!state.host)return;
+ stopTimers();state.phase='result';
+ const alivePlayersBefore=alive();
+ const valid=alivePlayersBefore.map(p=>({p,a:state.answers[p.id]})).filter(x=>x.a&&x.a.valid&&!(state.objections[x.p.id]&&!state.objections[x.p.id].cleared));
+ 
+ // 有効な回答を文字数の降順でソート
+ const sortedValid = [...valid].sort((a,b) => b.a.length - a.a.length);
+ 
+ const eliminatedByN = new Set();
+ let effectiveMaxLen = 0;
+ let foundValidLongest = false;
+
+ // 文字数が多いグループから順に判定し、「ん」であれば脱落、次に長いグループへ移行
+ let currentLenIndex = 0;
+ while (currentLenIndex < sortedValid.length && !foundValidLongest) {
+   const currentLen = sortedValid[currentLenIndex].a.length;
+   const sameLenGroup = sortedValid.filter(x => x.a.length === currentLen);
+   
+   // このグループの中で「ん」で終わる人を抽出
+   const nPlayersInGroup = sameLenGroup.filter(x => meaningfulLast(x.a.word) === 'ん');
+   
+   // 「ん」の人は脱落リストへ追加
+   nPlayersInGroup.forEach(x => eliminatedByN.add(x.p.id));
+   
+   if (nPlayersInGroup.length < sameLenGroup.length) {
+     // グループ内に「ん」以外の人がいる場合、この文字数がこのラウンドの有効な最長文字数となる
+     effectiveMaxLen = currentLen;
+     foundValidLongest = true;
+   } else {
+     // このグループの全員が「ん」だった場合、次の（短い）文字数グループへ進む
+     currentLenIndex += sameLenGroup.length;
+   }
+ }
+
+ const results=[];
+ for(const p of state.players){
+  const a=state.answers[p.id]||{word:'（無回答）',length:0,valid:false};
+  const objection=state.objections[p.id];
+  const isValid=!!a.valid&&!(objection&&!objection.cleared);
+  
+  const nOut=eliminatedByN.has(p.id);
+  // 「ん」で脱落した場合は残りのライフ全額がダメージ
+  const damage = isValid ? Math.max(0, effectiveMaxLen - a.length) : effectiveMaxLen;
+  const finalDamage = nOut ? p.life : damage;
+  
+  p.life=Math.max(0,p.life-finalDamage);
+  results.push({player:{...p},word:a.word,length:isValid?a.length:0,valid:isValid,damage:finalDamage,nOut});
+  
+  // ラウンド内で有効と判定された単語を使用済みに一括登録（同じターンでの重複入力許可のため）
+  if (isValid && !state.usedWords.includes(a.word)) {
+    state.usedWords.push(a.word);
+  }
+ }
+ 
+ const nextCandidates=valid.filter(x=>!eliminatedByN.has(x.p.id)).sort((a,b)=>b.a.length-a.a.length);
+ const bestLength=nextCandidates[0]?.a.length||0;
+ const bestCandidates=nextCandidates.filter(x=>x.a.length===bestLength);
+ const nextWord=bestCandidates.length?bestCandidates[Math.floor(Math.random()*bestCandidates.length)].a.word:'';
+ 
+ state.history.push({
+   round: state.round,
+   kana: state.kana,
+   results: results
+ });
+ 
+ state.nextKana=nextWord?meaningfulLast(nextWord):randomKana();
+ state.lastResults=results;
+ if(state.mode==='online'&&state.host)broadcast({type:'ROUND_RESULT',snapshot:snapshot(),results,maxLen:effectiveMaxLen,nextKana:state.nextKana});
+ renderResults(results,effectiveMaxLen);
+}
+
+function renderResults(results,maxLen){
+ showView('viewRoundResult');
+ 
+ const survivors=alive();
+ const isGameOver = survivors.length <= 1;
+
+ if(isGameOver && state.sound){
+   setTimeout(()=>{
+     playSound('cheer');
+   }, 300);
+ }
+
+ if (isGameOver) {
+   state.finished = true;
+   const winner = survivors[0]?.name || '';
+   // 勝者がいれば大きく表示、全員脱落（0人）なら「誰もいなくなった…」
+   const winnerText = survivors.length ? `<span class="text-3xl sm:text-4xl text-amber-500 font-black block mt-3">勝者：${esc(winner)}</span>` : `<span class="text-2xl sm:text-3xl text-slate-500 font-black block mt-3">誰もいなくなった…</span>`;
+   $('resultLongestInfo').innerHTML = `このラウンドの最長文字数：${maxLen}文字<br>${winnerText}`;
+   if(window.confetti && survivors.length) confetti({particleCount:120,spread:75,origin:{y:.6}});
+ } else {
+   $('resultLongestInfo').textContent=`このラウンドの最長文字数：${maxLen}文字`;
+ }
+
+ $('roundDamageList').innerHTML=results.map((r,i)=>{
+  const isLuckyN = r.valid && !r.nOut && meaningfulLast(r.word) === 'ん';
+  const badge = r.nOut ? '<span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">「ん」で脱落</span>' : 
+                isLuckyN ? '<span class="px-2 py-0.5 rounded-full bg-sky-500 text-white text-[10px] font-black">助かった…</span>' :
+                r.damage === 0 && r.valid && maxLen > 0 ? '<span class="px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black">最長達成！</span>' : '';
+  const damageText = r.nOut ? `脱落（-${r.damage}）` : 
+                     isLuckyN ? `なぜか助かった…（-${r.damage}）` :
+                     r.damage === 0 ? 'ダメージなし' : `-${r.damage} ダメージ`;
+  const pct=Math.max(0,Math.min(100,r.player.life/state.initialLife*100));
+  const hit=r.damage>0;
+  
+  if(hit && state.sound && !isGameOver){
+    setTimeout(()=>{
+      playSound('hit');
+    }, i*160);
+  }
+
+  const hitClass=hit?'damage-hit':'';
+  const floatText=hit?`<span class="damage-float" style="animation-delay:${i*160}ms">-${r.damage} DAMAGE!</span>`:'';
+  const damageTextColor = r.nOut ? 'text-rose-600' : isLuckyN ? 'text-sky-600' : r.damage === 0 ? 'text-emerald-600' : 'text-rose-500';
+  
+  return `<div class="p-4 rounded-2xl ${hitClass} ${r.nOut?'bg-rose-50 border-2 border-rose-400':r.damage===0&&r.valid?'bg-amber-50 border-2 border-amber-300':'bg-white border border-slate-200'}" style="${hit?`animation-delay:${i*160}ms`:''}">${floatText}<div class="flex justify-between items-center mb-1"><div class="font-black text-sm">${esc(r.player.name)} ${badge}</div><div class="text-xs font-mono">ライフ ${r.player.life}/${state.initialLife}</div></div><div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mb-2"><div class="damage-bar h-full bg-emerald-400" style="width:${pct}%"></div></div><div class="flex justify-between items-end text-xs"><div>回答：<b class="text-sky-700 break-all">${esc(r.word)}</b>（${r.length}文字）</div><b class="${damageTextColor}">${damageText}</b></div></div>`;
+ }).join('');
+
+ $('nextRound').textContent=survivors.length<=1?'結果を見る':'次のラウンドへ！';
+}
+
+function generateHistoryHtml() {
+  if (state.history.length === 0) {
+    return '<p class="text-slate-500 text-sm text-center py-4">履歴はありませんでした。</p>';
+  }
+  return state.history.map(h => {
+    const header = `
+      <div class="border-b-[1.5px] border-slate-400 pb-1 mb-3 flex items-baseline gap-1">
+        <span class="text-2xl font-black text-slate-800">${h.round}</span>
+        <span class="text-2xl font-black text-sky-600 tracking-wider">「${esc(h.kana)}」</span>
+      </div>
+    `;
+    const rows = `<div class="flex flex-wrap gap-x-8 gap-y-4 pl-1">` + 
+      h.results.map((r, i) => {
+        const word = r.word || '（無回答）';
+        const validStyle = r.valid ? 'text-slate-800' : 'text-slate-400 line-through';
+        const invalidBadge = r.valid ? '' : '<span class="ml-1 px-1 py-0.5 text-[10px] text-rose-500 border border-rose-300 rounded">無効</span>';
+        
+        return `
+          <div class="flex items-start gap-1.5">
+            <div class="flex flex-col">
+              <span class="text-[11px] text-slate-500 font-bold mb-0.5 leading-none">${esc(r.player.name)}</span>
+              <div class="flex items-center font-bold text-lg ${validStyle}">${esc(word)}${invalidBadge}</div>
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+      
+    return `<div>${header}${rows}</div>`;
+  }).join('');
+}
+
+function showHistory() {
+  $('usedWordsList').innerHTML = generateHistoryHtml();
+  const btn = $('backToHomeFromHistory');
+  if (state.mode === 'online') {
+    btn.textContent = '待機ルームに戻る（もう一度遊ぶ）';
+  } else {
+    btn.textContent = 'ホーム画面に戻る';
+  }
+  showView('viewGameHistory');
+}
+
+function nextRound(){
+ if(state.finished){
+   showHistory();
+   return;
+ }
+ if(state.mode==='online'&&!state.host){toast('次のラウンドはホストが進めます');return;}
+ const survivors=alive();
+ if(survivors.length<=1){state.finished=true; return;}
+
+ state.players=survivors;state.round++;state.kana=state.nextKana||randomKana();state.answers={};state.objections={};state.phase='answer';
+ if(state.mode==='online'){broadcast({type:'NEXT_ROUND',snapshot:snapshot()});}
+ renderTurn();showView('viewGame');
+ if(state.mode==='offline'){state.players.forEach(p=>state.answers[p.id]=null);startOfflineTurn();}
+ else startOnlineAnswerPhase();
+}
+
+function openRules(){$('ruleModal').classList.remove('hidden');}
+function closeRules(){$('ruleModal').classList.add('hidden');}
+
+function openHistoryModal() {
+  $('modalHistoryContent').innerHTML = generateHistoryHtml();
+  $('historyModal').classList.remove('hidden');
+}
+function closeHistoryModal() {
+  $('historyModal').classList.add('hidden');
+}
+
+function setupOfflineNames(count){
+ $('playerInputs').innerHTML=Array.from({length:count},(_,i)=>`<div><label class="block text-xs text-slate-500 font-bold mb-1">プレイヤー${i+1}の名前</label><input id="pName${i}" maxlength="12" value="プレイヤー${i+1}" class="w-full px-4 py-2 rounded-xl bg-white border border-sky-200 font-bold"></div>`).join('');
+}
+
+function startOffline(){
+ const life = parseInt($('offlineInitialLife').value);
+ const time = parseInt($('offlineTimeLimit').value);
+ const invTime = parseInt($('offlineInvestigationTime').value);
+ state.initialLife = isNaN(life) ? 50 : Math.max(1, life);
+ state.timeLimit = isNaN(time) ? 20 : Math.max(1, time);
+ state.investigationTime = isNaN(invTime) ? 15 : Math.max(0, invTime);
+
+ // 未入力の場合は「プレイヤー1」「プレイヤー2」のようにインデックスを付与して重複回避
+ const names=[...$('playerInputs').querySelectorAll('input')].map((x, i) => x.value.trim() || `プレイヤー${i+1}`);
+ 
+ if(new Set(names).size!==names.length){toast('プレイヤー名は重複しないようにしてください',true);return;}
+ state.mode='offline';state.host=true;state.myId=null;state.players=names.map((name,i)=>({id:`p${i+1}`,name,life:state.initialLife}));
+ beginGame();
+}
+
+function updateRoomMembers(){
+ $('onlineMemberCount').textContent=state.players.length;
+ $('onlineMemberList').innerHTML=state.players.map(p=>{
+   let banBtn = '';
+   if (state.host && p.id !== state.myId) {
+     banBtn = `<button onclick="banPlayer('${p.id}')" class="ml-2 px-2 py-0.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold" title="このプレイヤーを追放する">追放</button>`;
+   }
+   return `<div class="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-amber-200 text-sm font-bold text-amber-900 shadow-sm">
+     <span>${esc(p.name)} ${p.id === state.myId ? '(あなた)' : ''}</span>
+     ${banBtn}
+   </div>`;
+ }).join('');
+ 
+ $('startOnline').classList.toggle('hidden',!state.host||state.players.length<2);
+ $('waitingMessage').classList.toggle('hidden', state.host);
+}
+
+window.banPlayer = function(playerId) {
+  if(!state.host) return;
+  const conn = state.connections.get(playerId);
+  if(conn) {
+    conn.send({type:'KICKED', message:'ホストによって部屋から追放されました'});
+    setTimeout(() => {
+      conn.close();
+      state.connections.delete(playerId);
+    }, 200);
+  }
+  state.players = state.players.filter(p => p.id !== playerId);
+  updateRoomMembers();
+  broadcast({type:'MEMBERS',players:state.players});
+  toast('プレイヤーを追放しました');
+};
+
+function broadcast(data){for(const c of state.connections.values())if(c.open)c.send(data);}
+function send(data){if(state.host){handleHostMessage(data,state.myId);return;}const c=state.connections.values().next().value;if(c?.open)c.send(data);else toast('ホストとの接続が切れています',true);}
+
+function createRoom(){
+ const life = parseInt($('onlineInitialLife').value);
+ const time = parseInt($('onlineTimeLimit').value);
+ const invTime = parseInt($('onlineInvestigationTime').value);
+ state.initialLife = isNaN(life) ? 50 : Math.max(1, life);
+ state.timeLimit = isNaN(time) ? 20 : Math.max(1, time);
+ state.investigationTime = isNaN(invTime) ? 15 : Math.max(0, invTime);
+
+ cleanupPeer();
+ state.mode='online';state.host=true;state.phase='setup';state.finished=false;
+ state.players=[];state.answers={};state.usedWords=[];state.history=[];state.objections={};state.round=0;
+ const name=$('onlinePlayerName').value.trim().slice(0,12)||'ホスト';
+ state.roomCode=Math.random().toString(36).slice(2,7).toUpperCase();
+ state.peer=new Peer('shiritori-'+state.roomCode);
+ state.peer.on('open',id=>{
+  state.myId=id;state.players=[{id,name,life:state.initialLife}];$('displayRoomCode').textContent=state.roomCode;
+  showView('viewOnlineWaitRoom');
+  updateRoomMembers();toast('部屋を作成しました！');
+ });
+ state.peer.on('connection',conn=>{
+  if(state.players.length>=MAX_PLAYERS){conn.on('open',()=>conn.send({type:'ERROR',message:'この部屋は満員です'}));conn.close();return;}
+  state.connections.set(conn.peer,conn);
+  conn.on('data',data=>handleHostMessage(data,conn.peer));
+  conn.on('close',()=>{
+   if(state.connections.get(conn.peer)!==conn)return;
+   state.connections.delete(conn.peer);
+   const wasAlive=state.players.some(p=>p.id===conn.peer&&p.life>0);
+   state.players=state.players.filter(p=>p.id!==conn.peer);
+   if(state.phase==='answer'&&wasAlive&&!state.answers[conn.peer]){
+    state.answers[conn.peer]={word:'（通信切断）',length:0,valid:false,reason:'通信が切断されました'};
+    afterOnlineAnswer();
+   }else if(state.phase==='investigation'){
+    delete state.objections[conn.peer];
+    Object.keys(state.objections).forEach(id=>{if(state.objections[id].by===conn.peer)delete state.objections[id];});
+    broadcast({type:'OBJECTIONS',objections:state.objections});
+    renderInvestigation();
+   }
+   updateRoomMembers();broadcast({type:'MEMBERS',players:state.players});
+  });
+ });
+ state.peer.on('error',e=>{
+   toast(e.type==='unavailable-id'?'部屋コードが重複しました。もう一度作成してください':'通信エラー：'+e.type,true);
+   if (e.type === 'unavailable-id') {
+     $('backFromOnline').click();
+   }
+ });
+}
+
+function joinRoom(){
+ cleanupPeer();const code=$('inputRoomCode').value.trim().toUpperCase(),name=$('onlinePlayerName').value.trim().slice(0,12)||'ゲスト';
+ if(!/^[A-Z0-9]{5}$/.test(code)){toast('5桁の部屋コードを入力してください',true);return;}
+ state.mode='online';state.host=false;state.roomCode=code;state.peer=new Peer();
+ state.peer.on('open',id=>{
+  state.myId=id;const conn=state.peer.connect('shiritori-'+code,{reliable:true});state.connections.set('host',conn);
+  conn.on('open',()=>conn.send({type:'JOIN',name}));
+  conn.on('data',data=>handleGuestMessage(data));
+  conn.on('close',()=>{
+    toast('ホストとの接続が切れました',true);
+    $('leaveRoomWait').click();
+  });
+ });
+ state.peer.on('error',e=>{
+   toast('部屋が見つかりません。コードを確認してください',true);
+   $('backFromOnline').click();
+ });
+ showView('viewOnlineWaitRoom');
+ $('displayRoomCode').textContent=code;
+}
+
+function handleHostMessage(data,sender){
+ if(!state.host)return;
+ if(data.type==='JOIN'){
+  if(state.players.length>=MAX_PLAYERS||state.phase!=='setup'){const c=state.connections.get(sender);c?.send({type:'ERROR',message:'この部屋には参加できません'});return;}
+  if(state.players.some(p=>p.id===sender))return;
+  state.players.push({id:sender,name:String(data.name||'ゲスト').slice(0,12),life:state.initialLife});
+  updateRoomMembers();broadcast({type:'MEMBERS',players:state.players});
+ }
+ if(data.type==='CHAT'){
+  showChatMessage(data.senderName, data.text);
+  broadcast(data);
+ }
+ if(data.type==='ANSWER'&&state.phase==='answer'&&state.players.some(p=>p.id===sender)&&!state.answers[sender]){
+  const raw=String(data.answer?.word||'');const checked=validateWord(raw,state.kana);
+  state.answers[sender]=checked.ok?{word:checked.word,length:checked.length,valid:true}:{word:raw||'（無回答）',length:0,valid:false,reason:checked.reason};
+  afterOnlineAnswer();
+ }
+ if(data.type==='OBJECTION'&&state.phase==='investigation'){
+  const target=String(data.targetId||'');
+  if(target!==sender&&state.players.some(p=>p.id===target)&&!state.objections[target]){
+   state.objections[target]={by:sender,cleared:false};broadcast({type:'OBJECTIONS',objections:state.objections});startInvestigationTimer();renderInvestigation();
+  }
+ }
+ if(data.type==='CLEAR_OBJECTION'&&state.phase==='investigation'){
+  const target=String(data.targetId||''),o=state.objections[target];
+  if(o&&o.by!==sender&&!o.cleared){o.cleared=true;broadcast({type:'OBJECTIONS',objections:state.objections});renderInvestigation();}
+ }
+}
+
+function handleGuestMessage(data){
+ if(data.type==='ERROR'){toast(data.message,true);return;}
+ if(data.type==='KICKED'){toast(data.message,true);$('leaveRoomWait').click();return;}
+ if(data.type==='MEMBERS'){state.players=data.players;updateRoomMembers();}
+ if(data.type==='CHAT'){showChatMessage(data.senderName, data.text);}
+ if(data.type==='START_GAME'){
+  if(state.sound){
+   playSound('start');
+  }
+  applySnapshot(data.snapshot);
+  $('gameModeBadge').textContent='オンライン';
+  playTransition(()=>{
+   showView('viewGame');
+   startOnlineAnswerPhase();
+  });
+ }
+ if(data.type==='BACK_TO_WAIT'){
+  state.phase='setup';
+  applySnapshot(data.snapshot);
+  showView('viewOnlineWaitRoom');
+  updateRoomMembers();
+  toast('ホストが待機ルームに戻りました');
+ }
+ if(data.type==='ROUND_START'){applySnapshot(data.snapshot);showView('viewGame');startOnlineAnswerPhase();}
+ if(data.type==='ANSWER_STATUS'){
+   const me = state.players.find(p=>p.id===state.myId);
+   if(me && me.life > 0) {
+     $('answerStatus').textContent=`回答済み：${data.answered.length}/${state.players.length}`;
+   }
+ }
+ if(data.type==='INVESTIGATION'){applySnapshot(data.snapshot);showView('viewInvestigation');renderInvestigation();}
+ if(data.type==='OBJECTIONS'){state.objections=data.objections;renderInvestigation();if(Object.values(state.objections).some(o=>!o.cleared))startInvestigationTimer();}
+ if(data.type==='ROUND_RESULT'){applySnapshot(data.snapshot);state.nextKana=data.nextKana;state.finished=state.players.filter(p=>p.life>0).length<=1;renderResults(data.results,data.maxLen);}
+ if(data.type==='NEXT_ROUND'){applySnapshot(data.snapshot);state.answers={};showView('viewGame');startOnlineAnswerPhase();}
+}
+
+function startOnlineGame(){
+ if(!state.host||state.players.length<2)return;
+ state.players.forEach(p=>p.life=state.initialLife);state.usedWords=[];state.history=[];state.round=1;state.kana=randomKana();state.answers={};state.objections={};state.phase='answer';
+ broadcast({type:'START_GAME',snapshot:snapshot()});
+ if(state.sound){
+   playSound('start');
+ }
+ playTransition(()=>{
+  renderTurn();
+  showView('viewGame');
+  startOnlineAnswerPhase();
+ });
+}
+
+function cleanupPeer(){
+ stopTimers();
+ const oldPeer=state.peer;state.peer=null;state.connections.clear();
+ if(oldPeer){try{oldPeer.destroy();}catch(e){}}
+ 
+ $('chatDisplayArea').innerHTML = '';
+ $('chatInput').value = '';
+ $('chatInputArea').classList.add('hidden');
+}
+
+function initEvents(){
+ $('offlineMode').onclick=()=>{showView('viewOfflineSetup');setupOfflineNames(2);};
+ $('onlineMode').onclick=()=>{showView('viewOnlineSetup');const room=new URLSearchParams(location.search).get('room');if(room)$('inputRoomCode').value=room;};
+ document.querySelectorAll('.countBtn').forEach(b=>b.onclick=()=>setupOfflineNames(Number(b.dataset.count)));
+ 
+ $('backFromOffline').onclick=()=>showView('viewModeSelect');
+ $('backFromOnline').onclick=()=>{cleanupPeer();state.host=false;state.phase='setup';state.players=[];state.answers={};showView('viewModeSelect');};
+ 
+ $('leaveRoomWait').onclick=()=>{
+   cleanupPeer();
+   state.host=false;
+   state.players=[];
+   $('inputRoomCode').value='';
+   showView('viewModeSelect');
+   toast('部屋から退出しました');
+ };
+ 
+ $('leaveFromSpectate').onclick=()=>{
+   if(confirm('観戦を終了してホーム画面に戻りますか？')){
+     cleanupPeer();
+     state.host=false;
+     state.players=[];
+     $('inputRoomCode').value='';
+     showView('viewModeSelect');
+     toast('部屋から退出しました');
+   }
+ };
+
+ $('startOffline').onclick=startOffline;$('createRoom').onclick=createRoom;$('joinRoom').onclick=joinRoom;$('startOnline').onclick=startOnlineGame;
+ $('copyInvite').onclick=async()=>{const url=`${location.origin}${location.pathname}?room=${state.roomCode}`;try{await navigator.clipboard.writeText(url);toast('招待URLをコピーしました');}catch(e){toast('コピーできませんでした。URLを手動で共有してください',true);}};
+ $('submitAnswer').onclick=()=>{if(state.mode==='offline')submitOffline();else submitOnline();};
+ $('finishInvestigation').onclick=()=>{if(state.mode==='offline')finishRound();else if(state.host)finishRound();};
+ $('nextRound').onclick=nextRound;
+ $('rulesButton').onclick=openRules;$('closeRules').onclick=closeRules;$('closeRulesBottom').onclick=closeRules;
+ 
+ $('historyButton').onclick = openHistoryModal;
+ $('closeHistory').onclick = closeHistoryModal;
+ $('closeHistoryBottom').onclick = closeHistoryModal;
+
+ $('soundToggle').onclick=()=>{state.sound=!state.sound;$('soundToggle').textContent=state.sound?'🔊':'🔇';toast(state.sound?'効果音ON':'効果音OFF');};
+ $('answerInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('submitAnswer').click();});
+
+ $('chatOpenBtn').onclick = () => {
+   $('chatInputArea').classList.toggle('hidden');
+   if(!$('chatInputArea').classList.contains('hidden')) {
+     $('chatInput').focus();
+   }
+ };
+ $('chatSendBtn').onclick = () => {
+   const text = $('chatInput').value.trim();
+   if(!text) return;
+   const myName = state.players.find(p => p.id === state.myId)?.name || '自分';
+   if(state.host) {
+     showChatMessage(myName, text);
+     broadcast({type: 'CHAT', senderName: myName, text});
+   } else {
+     send({type: 'CHAT', senderName: myName, text});
+   }
+   $('chatInput').value = '';
+   $('chatInputArea').classList.add('hidden');
+ };
+ $('chatInput').addEventListener('keydown', e => {
+   if (e.key === 'Enter') $('chatSendBtn').click();
+ });
+
+ $('backToHomeFromHistory').onclick = () => {
+   if (state.mode === 'online') {
+     if (state.host) {
+       state.phase = 'setup';
+       state.history = [];
+       state.usedWords = [];
+       broadcast({type: 'BACK_TO_WAIT', snapshot: snapshot()});
+     }
+     showView('viewOnlineWaitRoom');
+     updateRoomMembers();
+   } else {
+     cleanupPeer();
+     state.mode = 'offline';
+     state.host = false;
+     showView('viewModeSelect');
+   }
+ };
+}
+
+initEvents();setupOfflineNames(2);
+</script>
+</body>
+</html>
